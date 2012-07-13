@@ -20,7 +20,7 @@ list.each do |file_name|
       push_script(index, file_name, f.read)
     end
     index += 1
-    files.pop(file_path)
+    files.delete file_path
   end
 end
 
