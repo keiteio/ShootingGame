@@ -25,6 +25,14 @@ class SpriteEx < Sprite
     super value
   end
   
+  def x
+    return @position.x
+  end
+  
+  def y
+    return @position.y
+  end
+  
 end
 
 

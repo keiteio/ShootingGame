@@ -83,7 +83,7 @@ class Vector
       end
       return vecs[1]
     else
-      raise StandardError.new("The + operator is available only between Vector classes.")
+      raise StandardError.new("The + operator is available only between Vector classes.\n  #{self.class.to_s} + #{other.class.to_s}")
     end
   end
   
@@ -95,7 +95,7 @@ class Vector
       end
       return vecs[1]
     else
-      raise StandardError.new("The - operator is available only between Vector classes.")
+      raise StandardError.new("The - operator is available only between Vector classes.\n  #{self.class.to_s} - #{other.class.to_s}")
     end
   end
   
@@ -103,6 +103,7 @@ class Vector
     for i in 0...@ary.size
       self[i] *= scalar
     end
+    @recomp_len=true
     return nil
   end
   
@@ -116,6 +117,7 @@ class Vector
     for i in 0...@ary.size
       self[i] /= scalar * 1.0
     end
+    @recomp_len=true
     return nil
   end
   
@@ -165,10 +167,13 @@ class Vector2d < Vector
         self[1] = x
       end
     end
+    @recomp_angle=true
   end
   
   def x=(value)
     self[0] = value
+    @recomp_len = true
+    @recomp_angle=true
   end
   
   def x
@@ -177,6 +182,8 @@ class Vector2d < Vector
   
   def y=(value)
     self[1] = value
+    @recomp_len = true
+    @recomp_angle=true
   end
   
   def y
@@ -184,18 +191,19 @@ class Vector2d < Vector
   end
   
   def rotate!(theta)
-    cos0 = Math.cos( (theta % 360.0) / 360.0 * Math::PI * 2 )
-    sin0 = Math.sin( (theta % 360.0) / 360.0 * Math::PI * 2 )
-    
+    cos0 = Math.cos( ((theta % 360.0) / 180.0) * Math::PI )
+    sin0 = Math.sin( ((theta % 360.0) / 180.0) * Math::PI )
     nx = self.x * cos0 - self.y * sin0
     ny = self.x * sin0 + self.y * cos0
     
-    self.x = nx
+    self.x = -nx
     self.y = ny
+    
+    @recomp_len = true
   end
   
   def rotate(theta)
-    v = Vector2d.new(self)
+    v = Vector2d.new(self.x, self.y)
     v.rotate! theta
     return v
   end
@@ -203,6 +211,7 @@ class Vector2d < Vector
   def unit!
     self.x /= self.len
     self.y /= self.len
+    @recomp_len = true
   end
   
   def unit
@@ -211,12 +220,25 @@ class Vector2d < Vector
     return v
   end
   
+  def angle
+    if @recomp_angle
+      @angle = Math.atan2(self.y, self.x) / Math::PI * 180 + 90
+      @recomp_angle = false
+    end
+    return @angle
+  end
+  
+  def angle=(theta)
+    self.rotate!(theta - self.angle) if theta != self.angle
+    @angle = theta
+  end
+  
   def self.unit_x
-    Vector2d.new 1, 0
+    Vector2d.new(1, 0)
   end
   
   def self.unit_y
-    Vector2d.new 0, 1
+    Vector2d.new(0, 1)
   end
   
   # 
