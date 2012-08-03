@@ -22,12 +22,13 @@ module GameObject
     
   end
   
-  class Bullet < SpriteEx
+  class Particle < SpriteEx
     attr_accessor :thrusters
     attr_accessor :mass
     attr_accessor :verocity
     attr_accessor :age
     attr_accessor :life_span
+    attr_accessor :dead
     
     def initialize(viewport = nil)
       super viewport
@@ -35,13 +36,22 @@ module GameObject
       @thrusters = []
       @mass = 1.0
       @age = 0
+      @life_span = -1
+      @dead = false
     end
     
     def update
       super
+      @age += 1
+      if @life_span > 0 && @life_span < @age
+        self.dead = true
+      end
     end
     
     
+  end
+  
+  class Bullet < Particle
   end
   
   class Machine < Bullet
@@ -53,19 +63,9 @@ module GameObject
     def initialize(viewport = nil)
       super
       
-      @main_thruster = Force.new(
-        Vector2d.new(0, -30),
-        Proc.new{ |f| self.logic_main_thruster(f) }
-      )
-      @right_thruster = Force.new(
-        Vector2d.new(0, 0),
-        Proc.new{ |f| self.logic_vernier_thruster(:RIGHT, f) }
-      )
-      @left_thruster = Force.new(
-        Vector2d.new(0, 0),
-        Proc.new{ |f| self.logic_vernier_thruster(:LEFT, f) }
-      )
-      
+      @main_thruster = MainThruster.new(self)
+      @right_thruster = VernierThruster.new(self, :RIGHT)
+      @left_thruster = VernierThruster.new(self, :LEFT)
       @right_thruster.available = false
       @left_thruster.available = false
       
@@ -84,44 +84,59 @@ module GameObject
       
     end
     
-    
-    def logic_main_thruster(f)
-      f.vector.unit!
-      f.vector.angle = self.angle
+    class MainThruster < Force
+      def initialize(parent)
+        super Vector2d.new(0, -30), self.logic(parent)
+      end
       
-      dir = Input.dir
-      if dir[1] == -1
-        f.vector.multiply! 800
-      elsif dir[1] == 1
-        f.vector.multiply! 100
-      else
-        f.vector.multiply! 200
+      def logic(parent)
+        Proc.new{ |f|
+          f.vector.unit!
+          f.vector.angle = parent.angle
+          
+          dir = Input.dir
+          if dir[1] == -1
+            f.vector.multiply! 800
+          elsif dir[1] == 1
+            f.vector.multiply! 50
+          else
+            f.vector.multiply! 200
+          end
+        }
       end
     end
     
-    # rudder = :RIGHT or :LEFT
-    def logic_vernier_thruster(rudder, f)
-      sign = (rudder == :RIGHT ? -1 : 1)
+    class VernierThruster < Force
+      def initialize(parent, rudder)
+        super Vector2d.new(0, -30), self.logic(parent, rudder)
+      end
       
-      if Input.press? rudder
-        f.vector.x = 800
-        f.vector.y = 0
-        f.vector.angle = self.angle + (90 * sign)
-        self.angle -= (1*sign)
-        f.available = true
-      else
-        if f.available
-          if f.vector.length > 0
-            f.vector.division! 20
-            self.angle -= (1*sign)
-            if f.vector.length < 0.001
-              f.vector.x = 0
-              f.vector.y = 0
-              f.available = false
+      def logic(parent, rudder)
+        Proc.new{ |f|
+          sign = (rudder == :RIGHT ? -1 : 1)
+          
+          if Input.press? rudder
+            f.vector.x = 800
+            f.vector.y = 0
+            f.vector.angle = parent.angle + (90 * sign)
+            parent.angle -= (1*sign)
+            f.available = true
+          else
+            if f.available
+              if f.vector.length > 0
+                f.vector.division! 20
+                parent.angle -= (1*sign)
+                if f.vector.length < 0.001
+                  f.vector.x = 0
+                  f.vector.y = 0
+                  f.available = false
+                end
+              end
             end
           end
-        end
+        }
       end
+      
     end
     
   end
@@ -150,7 +165,16 @@ module GameObject
     def update
       delta = 1.0 / Graphics.frame_rate
       
-      self.each do |obj|
+      for i in 0...self.size
+        obj = self[i]
+        if obj.disposed?
+          self[i] = nil
+          next
+        elsif obj.dead
+          obj.dispose
+          next
+        end
+        
         obj.update
         
         forces = obj.thrusters + @world.forces
@@ -173,6 +197,71 @@ module GameObject
         obj.y += obj.verocity.y * delta
       end
       
+      self.compact!
+      
+    end
+    
+  end
+  
+  class Emitter
+    attr_accessor :direction
+    attr_accessor :direction_spread
+    attr_accessor :initial_speed
+    attr_accessor :initial_speed_fluct
+    attr_accessor :position
+    attr_accessor :counter
+    attr_accessor :amount
+    attr_accessor :interval
+    attr_accessor :particle
+    attr_reader   :generated
+    
+    def initialize
+      @direction = 0
+      @direction_spread = 0
+      @initial_speed = 1
+      @initial_speed_rand = 0.0
+      @position = Vector2d.new(0, 0)
+      @counter = 0
+      @proc = nil
+    end
+    
+    def update
+      generated = nil
+      if @proc
+        @proc.call self
+      end
+      
+      if @counter % @interval < 1
+        @generated = self.generate
+      end
+      
+      @counter += 1
+    end
+    
+    def generate
+      gen = []
+      @amount.times do
+        ptcl = Particle.new(@particle.viewport)
+        ptcl.bitmap = @particle.bitmap
+        ptcl.ox = @particle.ox
+        ptcl.oy = @particle.oy
+        ptcl.zoom_x = @particle.zoom_x
+        ptcl.zoom_y = @particle.zoom_y
+        ptcl.life_span = @particle.life_span
+        ptcl.thrusters.push Force.new(
+          Vector2d.from_rotation(
+            @direction - @direction_spread / 2 + @direction_spread * rand, 
+            @initial_speed
+          )
+        )
+        ptcl.x = @position.x
+        ptcl.y = @position.y
+        ptcl.z = @particle.z
+        ptcl.blend_type = @particle.blend_type
+        ptcl.visible = true
+        gen.push ptcl
+      end
+      return gen
     end
     
   end
