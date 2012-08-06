@@ -48,7 +48,6 @@ module GameObject
       end
     end
     
-    
   end
   
   class Bullet < Particle
@@ -92,15 +91,15 @@ module GameObject
       def logic(parent)
         Proc.new{ |f|
           f.vector.unit!
-          f.vector.angle = parent.angle
           
           dir = Input.dir
           if dir[1] == -1
-            f.vector.multiply! 800
+            
+            f.vector.angle = parent.angle
+            f.vector.multiply! 500
           elsif dir[1] == 1
-            f.vector.multiply! 50
-          else
-            f.vector.multiply! 200
+            f.vector.angle = parent.angle - 180
+            f.vector.multiply! 400
           end
         }
       end
@@ -119,13 +118,13 @@ module GameObject
             f.vector.x = 800
             f.vector.y = 0
             f.vector.angle = parent.angle + (90 * sign)
-            parent.angle -= (1*sign)
+            parent.angle -= (0.2*sign)
             f.available = true
           else
             if f.available
               if f.vector.length > 0
                 f.vector.division! 20
-                parent.angle -= (1*sign)
+                parent.angle -= (0.2*sign)
                 if f.vector.length < 0.001
                   f.vector.x = 0
                   f.vector.y = 0
