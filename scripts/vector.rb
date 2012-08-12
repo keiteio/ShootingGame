@@ -222,7 +222,7 @@ class Vector2d < Vector
   
   def angle
     if @recomp_angle
-      @angle = Math.atan2(self.y, self.x) / Math::PI * 180 + 90
+      @angle = (Math.atan2(self.y, self.x) / Math::PI * 180 + 90) % 360
       @recomp_angle = false
     end
     return @angle
@@ -230,7 +230,8 @@ class Vector2d < Vector
   
   def angle=(theta)
     self.rotate!(theta - self.angle) if theta != self.angle
-    @angle = theta
+    p [ self[0], self[1] ]
+    @angle = theta % 360
   end
   
   def self.unit_x

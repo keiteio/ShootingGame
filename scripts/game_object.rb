@@ -80,7 +80,11 @@ module GameObject
       @main_thruster.update
       @right_thruster.update
       @left_thruster.update
-      
+      if Input.press?(:R)
+        self.angle -= 2
+      elsif Input.press?(:L)
+        self.angle += 2
+      end
     end
     
     class MainThruster < Force
@@ -118,13 +122,13 @@ module GameObject
             f.vector.x = 800
             f.vector.y = 0
             f.vector.angle = parent.angle + (90 * sign)
-            parent.angle -= (0.2*sign)
+            #parent.angle -= (0.2*sign)
             f.available = true
           else
             if f.available
               if f.vector.length > 0
                 f.vector.division! 20
-                parent.angle -= (0.2*sign)
+                #parent.angle -= (0.2*sign)
                 if f.vector.length < 0.001
                   f.vector.x = 0
                   f.vector.y = 0
