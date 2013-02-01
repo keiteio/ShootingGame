@@ -51,6 +51,8 @@ module GameObject
   end
   
   class Bullet < Particle
+    attr_accessor :side   # 敵かな、味方かな識別用
+    
   end
   
   class Machine < Bullet
@@ -67,10 +69,13 @@ module GameObject
       @left_thruster = VernierThruster.new(self, :LEFT)
       @right_thruster.available = false
       @left_thruster.available = false
+      @flash_thruster = FlashThruster.new(self)
+      @flash_thruster.available = false
       
       @thrusters.push(@main_thruster)
       @thrusters.push(@right_thruster)
       @thrusters.push(@left_thruster)
+      @thrusters.push(@flash_thruster)
       
       @mass = 1
     end
@@ -80,10 +85,11 @@ module GameObject
       @main_thruster.update
       @right_thruster.update
       @left_thruster.update
+      @flash_thruster.update
       if Input.press?(:R)
-        self.angle -= 2
+        self.angle -= 1
       elsif Input.press?(:L)
-        self.angle += 2
+        self.angle += 1
       end
     end
     
@@ -95,15 +101,15 @@ module GameObject
       def logic(parent)
         Proc.new{ |f|
           f.vector.unit!
+          f.vector.angle = parent.angle
           
           dir = Input.dir
-          if dir[1] == -1
-            
-            f.vector.angle = parent.angle
-            f.vector.multiply! 500
-          elsif dir[1] == 1
-            f.vector.angle = parent.angle - 180
-            f.vector.multiply! 400
+          if dir[1] == 1
+            f.vector.multiply! -1200
+          elsif dir[1] == -1
+            f.vector.multiply! -800
+          else
+            f.vector.multiply! -400
           end
         }
       end
@@ -121,14 +127,44 @@ module GameObject
           if Input.press? rudder
             f.vector.x = 800
             f.vector.y = 0
-            f.vector.angle = parent.angle + (90 * sign)
-            #parent.angle -= (0.2*sign)
+            f.vector.angle = parent.angle + (120 * sign)
             f.available = true
           else
             if f.available
               if f.vector.length > 0
                 f.vector.division! 20
-                #parent.angle -= (0.2*sign)
+                if f.vector.length < 0.001
+                  f.vector.x = 0
+                  f.vector.y = 0
+                  f.available = false
+                end
+              end
+            end
+          end
+        }
+      end
+    end
+    
+    class FlashThruster < Force
+      def initialize(parent)
+        super Vector2d.new(0, -30), self.logic(parent)
+      end
+      
+      def logic(parent)
+        Proc.new{ |f|
+          sign = 0
+          sign =  1 if Input.press?(:LEFT)
+          sign = -1 if Input.press?(:RIGHT)
+          
+          if sign != 0 && Input.trigger?(:A)
+            f.vector.x = 80000
+            f.vector.y = 4000
+            f.vector.angle = parent.angle + (90 * sign)
+            f.available = true
+          else
+            if f.available
+              if f.vector.length > 0
+                f.vector.division! 10
                 if f.vector.length < 0.001
                   f.vector.x = 0
                   f.vector.y = 0
@@ -182,7 +218,6 @@ module GameObject
         
         forces = obj.thrusters + @world.forces
         
-        need_compact = false
         for i in 0...forces.size
           f = forces[i]
           f.update
@@ -193,6 +228,7 @@ module GameObject
             a.multiply!(delta)
             obj.verocity += a
             obj.verocity.multiply!(ATTENUATION)
+            
           end
         end
         # 位置の更新
@@ -251,12 +287,10 @@ module GameObject
         ptcl.zoom_x = @particle.zoom_x
         ptcl.zoom_y = @particle.zoom_y
         ptcl.life_span = @particle.life_span
-        ptcl.thrusters.push Force.new(
-          Vector2d.from_rotation(
+        ptcl.vector = Vector2d.from_rotation(
             @direction - @direction_spread / 2 + @direction_spread * rand, 
             @initial_speed
           )
-        )
         ptcl.x = @position.x
         ptcl.y = @position.y
         ptcl.z = @particle.z

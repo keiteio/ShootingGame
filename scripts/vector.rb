@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# ¡ƒxƒNƒgƒ‹ŒvZ‚ğ‚·‚é‚½‚ß‚ÌƒNƒ‰ƒXB
+# â– ãƒ™ã‚¯ãƒˆãƒ«è¨ˆç®—ã‚’ã™ã‚‹ãŸã‚ã®ã‚¯ãƒ©ã‚¹ã€‚
 #-------------------------------------------------------------------------------
 class Vector
   def initialize(arg)
@@ -191,10 +191,11 @@ class Vector2d < Vector
   end
   
   def rotate!(theta)
+    # "cos0" means "cosine theta". Also "sin0".
     cos0 = Math.cos( ((theta % 360.0) / 180.0) * Math::PI )
     sin0 = Math.sin( ((theta % 360.0) / 180.0) * Math::PI )
-    nx = self.x * cos0 - self.y * sin0
-    ny = self.x * sin0 + self.y * cos0
+    nx = ((self.x * cos0 - self.y * sin0)*1000).floor / 1000.0
+    ny = ((self.x * sin0 + self.y * cos0)*1000).floor / 1000.0
     
     self.x = -nx
     self.y = ny
@@ -222,7 +223,10 @@ class Vector2d < Vector
   
   def angle
     if @recomp_angle
-      @angle = (Math.atan2(self.y, self.x) / Math::PI * 180 + 90) % 360
+      @angle = (Math.atan2(self.y, self.x) / Math::PI * 180) % 360
+      @angle *= 1000.0
+      @angle = @angle.floor
+      @angle /= 1000.0
       @recomp_angle = false
     end
     return @angle
@@ -230,8 +234,6 @@ class Vector2d < Vector
   
   def angle=(theta)
     self.rotate!(theta - self.angle) if theta != self.angle
-    p [ self[0], self[1] ]
-    @angle = theta % 360
   end
   
   def self.unit_x

@@ -12,6 +12,7 @@ class Scene_Battle < Scene_Base
     @player.oy = @player.bitmap.height / 2
     @player.x = Graphics.width / 2
     @player.y = Graphics.height / 2
+    @player.angle = 90
     @player.z = 100
     
     @object_manager = GameObject::Manager.new
@@ -51,8 +52,10 @@ class Scene_Battle < Scene_Base
   def update
     super
     @object_manager.update
-    @game_field.viewport.ox = @player.x - Graphics.width / 2
-    @game_field.viewport.oy = @player.y - Graphics.height / 2
+    v = Vector2d.from_rotation(@player.angle, 120)
+    p [v.x, v.y]
+    @game_field.viewport.ox = @player.x - Graphics.width / 2 - v.x
+    @game_field.viewport.oy = @player.y - Graphics.height / 2 - v.y
     
   end
   #--------------------------------------------------------------------------
