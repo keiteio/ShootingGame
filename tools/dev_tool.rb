@@ -1,7 +1,18 @@
 class DevelopTool
   
-  CONFIG_PATH="../tools/config.rb"
-  SCRIPT_PATH="../scripts/"
+  unless $PROGRAM_NAME
+    # RGSSの場合
+    CONFIG_PATH="../tools/config.rb"
+    SCRIPT_PATH="../scripts/"
+  else
+    # Rubyの場合
+    CONFIG_PATH="./tools/config.rb"
+    SCRIPT_PATH="./scripts/"
+  end
+  
+  TKOOL_PATH="./data"
+  
+  ADDITIONAL_SCRIPTS = "Data/AdditionalScripts.rvdata2"
   
   class Config
     attr_accessor :prior_scripts
@@ -85,7 +96,49 @@ class DevelopTool
   # ● 外部スクリプトのバイナリ化
   #--------------------------------------------------------------------------
   def build
+    # ライブラリの読込
+    require "zlib"
     
+    # ビルドするスクリプト
+    builded = []
+    index = 0
+    
+    # 設定ファイル読み込み
+    load_script(CONFIG_PATH, :bind => binding)
+    
+    # 優先スクリプトファイル読込
+    @config.prior_scripts.each do |script|
+      filepath = SCRIPT_PATH + script
+      
+      # データの作成
+      builded.push build_data(filepath, index)
+      index += 1
+    end
+    
+    # その他スクリプトファイル読込
+    Dir.glob(SCRIPT_PATH + "*") do |filepath|
+      fname = File.basename(filepath)
+      # 読み込み済みスクリプトでなければ実行
+      unless @config.prior_scripts.include? fname
+        # データの作成
+        builded.push build_data(filepath, index)
+        index += 1
+      end
+    end
+    
+    open(File.join(TKOOL_PATH, ADDITIONAL_SCRIPTS), "wb") do |f|
+      Marshal.dump(builded, f)
+    end
   end
+  
+  #--------------------------------------------------------------------------
+  # ● ビルド用スクリプトデータを作成する
+  #--------------------------------------------------------------------------
+  def build_data(filepath, index)
+    code = read_file(filepath)
+    fname = File.basename filepath
+    return { :index => index, :fname => fname, :code => Zlib::Deflate.deflate(code) }
+  end
+  private :build_data
   
 end
