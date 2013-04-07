@@ -6,7 +6,7 @@ namespace :run do
   end
   
   task :dev do
-    system "./data/Game.exe console test"
+    system "./data/Game.exe test console"
   end
 end
 

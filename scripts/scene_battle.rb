@@ -1,4 +1,5 @@
 class Scene_Battle < Scene_Base
+  include Win32APIHelpers
   #--------------------------------------------------------------------------
   # ● 開始処理
   #--------------------------------------------------------------------------
@@ -17,7 +18,6 @@ class Scene_Battle < Scene_Base
     
     @object_manager = GameObject::Manager.new
     @object_manager.push @player
-    
     
     
   end
@@ -57,6 +57,7 @@ class Scene_Battle < Scene_Base
     @game_field.viewport.ox = @player.x - Graphics.width / 2 - v.x
     @game_field.viewport.oy = @player.y - Graphics.height / 2 - v.y
     
+    p getClientCursorPos(getGameWindow)
   end
   #--------------------------------------------------------------------------
   # ● フレーム更新（基本）
